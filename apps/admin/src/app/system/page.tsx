@@ -1,0 +1,1 @@
+import { Card, PageHeader } from '@g64/ui'; export default function Page(){return <><PageHeader eyebrow="G64 Admin" title="System" description="This workspace is a Phase 0 placeholder."/><Card><h2>Nothing to review yet</h2><p>This section will be enabled in a future phase.</p></Card></>}

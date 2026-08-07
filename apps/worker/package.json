@@ -1,0 +1,1 @@
+{"name":"@g64/worker","version":"0.1.0","private":true,"type":"module","scripts":{"dev":"tsx watch src/main.ts","build":"tsc -p tsconfig.json","start":"node dist/main.js","typecheck":"tsc -p tsconfig.json --noEmit"},"dependencies":{"@g64/config":"workspace:*"},"devDependencies":{"tsx":"^4.20.4"}}
