@@ -1,12 +1,14 @@
 # G64 v0.1
 
+**Current stage: Phase 0 — Foundation**
+
 G64 is the foundation of an international, non-custodial digital-asset platform. This repository implements **Phase 0 only**: application shells, modular backend structure, shared packages, and local infrastructure. It does not implement accounts, asset operations, custody, or blockchain connectivity.
 
 ## Requirements
 
 - Node.js 24 LTS
-- pnpm 10
-- Docker with Compose
+- pnpm 10.28.1
+- Docker with Compose for local PostgreSQL, Redis, and database migrations
 
 ## Get started
 
