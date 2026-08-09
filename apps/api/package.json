@@ -9,15 +9,18 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@nestjs/common": "^11.1.6",
-    "@nestjs/core": "^11.1.6",
     "@g64/config": "workspace:*",
     "@g64/database": "workspace:*",
+    "@g64/types": "workspace:*",
+    "@nestjs/common": "^11.1.6",
+    "@nestjs/core": "^11.1.6",
+    "nodemailer": "^9.0.5",
+    "redis": "^6.2.0",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2",
-    "@g64/types": "workspace:*"
+    "rxjs": "^7.8.2"
   },
   "devDependencies": {
+    "@types/nodemailer": "^8.0.1",
     "tsx": "^4.20.4"
   }
 }
