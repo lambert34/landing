@@ -83,6 +83,8 @@ describe('AuthController', () => {
   it('uses production Secure cookie attributes and the shared crypto-g64.ru domain', async () => {
     Object.assign(process.env, {
       NODE_ENV: 'production',
+      WEB_URL: 'https://www.crypto-g64.ru',
+      API_URL: 'https://api.crypto-g64.ru',
       AUTH_COOKIE_DOMAIN: '.crypto-g64.ru',
     });
     const auth = { verifyOtp: vi.fn().mockResolvedValue({ sessionToken: 'raw-secret', user }) };
