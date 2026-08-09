@@ -84,17 +84,13 @@ export class AuthService {
         new Date(Date.now() + this.config.SESSION_TTL_SECONDS * 1000),
       );
 
-      if (result?.status === 'account_exists') throw new AuthError('ACCOUNT_ALREADY_EXISTS', 409);
+      if (result.status === 'account_exists') throw new AuthError('ACCOUNT_ALREADY_EXISTS', 409);
 
-      if (!result) {
-        const failed = await this.repository.failChallenge(
-          challengeId,
-          this.config.OTP_MAX_ATTEMPTS,
-        );
+      if (result.status === 'invalid' || result.status === 'limited') {
         await this.repository.audit('otp_failed', null);
         throw new AuthError(
-          failed === 'limited' ? 'TOO_MANY_ATTEMPTS' : 'INVALID_OR_EXPIRED_CODE',
-          failed === 'limited' ? 429 : 400,
+          result.status === 'limited' ? 'TOO_MANY_ATTEMPTS' : 'INVALID_OR_EXPIRED_CODE',
+          result.status === 'limited' ? 429 : 400,
         );
       }
 
