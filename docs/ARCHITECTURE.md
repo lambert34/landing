@@ -1,15 +1,7 @@
 # Architecture
 
-G64 Phase 0 is a pnpm TypeScript monorepo.
+G64 is a pnpm TypeScript monorepo. Web and admin are Next.js deployments; API remains one NestJS modular monolith; PostgreSQL is the durable system of record through Drizzle; Redis supplies distributed ephemeral controls; shared packages contain UI, validated configuration, database schema, and transport contracts.
 
-- **Web** — Next.js App Router consumer experience, with landing, account UI previews, and a non-operational portfolio shell.
-- **Admin** — visually distinct Next.js internal workspace using shared primitives.
-- **API** — a NestJS modular monolith. Auth, users, wallets, prices, transactions, swaps, faucet, and admin modules are inert boundaries; Health exposes only `GET /api/health`.
-- **Worker** — a small validated-config process that starts healthy but schedules no work.
-- **PostgreSQL** — persistent relational storage managed with Drizzle ORM; Phase 0 has only a users table.
-- **Redis** — locally provisioned infrastructure reserved for health verification; no caching or queues exist.
-- **Shared packages** — UI primitives/tokens, validated configuration, database schema/migrations, and transport types.
+Phase 1A activates the existing Auth module with passwordless OTP, SMTP delivery, opaque server-side sessions, audit events, and Redis rate limiting. Database and Redis are reusable API infrastructure modules. The API remains independently deployable and exposes liveness plus database/Redis readiness. It is provider-neutral and consumes standard PostgreSQL, Redis, and SMTP connection settings.
 
-Applications remain deployment units inside one codebase; the backend is not split into microservices.
-
-> User private keys will never be stored by the G64 backend.
+No microservices or filesystem/process-memory authentication state is introduced. Frontend integration and all wallet/blockchain capabilities remain outside Phase 1A.

@@ -1,1 +1,20 @@
-{"version":"7","dialect":"postgresql","entries":[{"idx":0,"version":"7","when":1754524800000,"tag":"0000_phase_zero","breakpoints":true}]}
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1754524800000,
+      "tag": "0000_phase_zero",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1786284000000,
+      "tag": "0001_phase_1a_auth",
+      "breakpoints": true
+    }
+  ]
+}

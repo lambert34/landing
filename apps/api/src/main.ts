@@ -1,3 +1,16 @@
-import 'reflect-metadata'; import { NestFactory } from '@nestjs/core'; import { AppModule } from './app.module.js';
-async function bootstrap() { const app = await NestFactory.create(AppModule); app.setGlobalPrefix('api'); app.enableShutdownHooks(); await app.listen(Number(process.env.PORT ?? 4000)); }
+import 'reflect-metadata';
+import { NestFactory } from '@nestjs/core';
+import { loadConfig } from '@g64/config';
+import { AppModule } from './app.module.js';
+import { createCorsOptions } from './cors.js';
+
+export async function bootstrap(): Promise<void> {
+  const config = loadConfig();
+  const app = await NestFactory.create(AppModule);
+  app.setGlobalPrefix('api');
+  app.enableCors(createCorsOptions(config.WEB_URL));
+  app.enableShutdownHooks();
+  await app.listen(Number(process.env.PORT ?? 4000));
+}
+
 void bootstrap();
