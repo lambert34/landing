@@ -29,7 +29,6 @@ function makeService(overrides: Record<string, unknown> = {}) {
     userByEmail: vi.fn().mockResolvedValue(storedUser),
     createChallenge: vi.fn(),
     consumeAndAuthenticate: vi.fn(),
-    failChallenge: vi.fn().mockResolvedValue('invalid'),
     session: vi.fn(),
     revoke: vi.fn(),
     audit: vi.fn(),
@@ -78,23 +77,22 @@ describe('AuthService', () => {
 
   it('maps expired, consumed, replayed, or nonexistent challenges to invalid code', async () => {
     const { service, repository } = makeService({
-      consumeAndAuthenticate: vi.fn().mockResolvedValue(null),
-      failChallenge: vi.fn().mockResolvedValue('invalid'),
+      consumeAndAuthenticate: vi.fn().mockResolvedValue({ status: 'invalid' }),
     });
     await expect(
       service.verifyOtp('11111111-1111-4111-8111-111111111111', '123456'),
     ).rejects.toMatchObject({ status: 400 });
-    expect(repository.failChallenge).toHaveBeenCalledTimes(1);
+    expect(repository.audit).toHaveBeenCalledWith('otp_failed', null);
   });
 
-  it('returns TOO_MANY_ATTEMPTS exactly when the attempt limit is reached', async () => {
-    const { service } = makeService({
-      consumeAndAuthenticate: vi.fn().mockResolvedValue(null),
-      failChallenge: vi.fn().mockResolvedValue('limited'),
+  it('returns TOO_MANY_ATTEMPTS exactly when the atomic attempt limit is reached', async () => {
+    const { service, repository } = makeService({
+      consumeAndAuthenticate: vi.fn().mockResolvedValue({ status: 'limited' }),
     });
     await expect(
       service.verifyOtp('11111111-1111-4111-8111-111111111111', '123456'),
     ).rejects.toMatchObject({ status: 429 });
+    expect(repository.audit).toHaveBeenCalledWith('otp_failed', null);
   });
 
   it('consumes a valid duplicate signup before returning ACCOUNT_ALREADY_EXISTS', async () => {
