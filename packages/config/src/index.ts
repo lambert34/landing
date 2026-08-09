@@ -1,10 +1,21 @@
 import { z } from 'zod';
 
 const optionalLocal = z.string().default('');
+const databaseUrl = z
+  .url()
+  .refine((value) => value.startsWith('postgresql://') || value.startsWith('postgres://'), {
+    message: 'DATABASE_URL must use postgresql:// or postgres://',
+  });
+const redisUrl = z
+  .url()
+  .refine((value) => value.startsWith('redis://') || value.startsWith('rediss://'), {
+    message: 'REDIS_URL must use redis:// or rediss://',
+  });
+
 const schema = z
   .object({
-    DATABASE_URL: z.string().min(1),
-    REDIS_URL: z.string().min(1),
+    DATABASE_URL: databaseUrl,
+    REDIS_URL: redisUrl,
     WEB_URL: z.url(),
     API_URL: z.url(),
     ADMIN_URL: z.url().default('http://localhost:3001'),
@@ -22,13 +33,14 @@ const schema = z
     SMTP_SECURE: z
       .enum(['true', 'false'])
       .default('false')
-      .transform((v) => v === 'true'),
+      .transform((value) => value === 'true'),
     SMTP_USER: optionalLocal,
     SMTP_PASSWORD: optionalLocal,
     EMAIL_FROM: optionalLocal,
   })
   .superRefine((value, context) => {
     if (value.NODE_ENV !== 'production') return;
+
     for (const key of [
       'SMTP_HOST',
       'SMTP_USER',
@@ -43,6 +55,7 @@ const schema = z
           message: `${key} is required in production`,
         });
     }
+
     if (!value.AUTH_COOKIE_DOMAIN.endsWith('.crypto-g64.ru'))
       context.addIssue({
         code: 'custom',
@@ -50,7 +63,9 @@ const schema = z
         message: 'must support .crypto-g64.ru',
       });
   });
+
 export type G64Config = z.infer<typeof schema>;
+
 export function loadConfig(environment: NodeJS.ProcessEnv = process.env): G64Config {
   return schema.parse(environment);
 }
