@@ -2,6 +2,7 @@
   "name": "@g64/api",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "tsx watch src/main.ts",
     "build": "pnpm --filter @g64/config build && pnpm --filter @g64/database build && pnpm --filter @g64/types build && tsc -p tsconfig.json",
