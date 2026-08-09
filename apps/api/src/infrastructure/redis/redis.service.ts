@@ -4,24 +4,22 @@ import { createClient } from 'redis';
 
 @Injectable()
 export class RedisService implements OnApplicationShutdown {
-  private client?: ReturnType<typeof createClient>;
-  private connecting?: Promise<ReturnType<typeof createClient>>;
+  private readonly client = createClient({ url: loadConfig().REDIS_URL });
+  private connecting: Promise<void> | undefined;
 
-  private async getClient(): Promise<ReturnType<typeof createClient>> {
-    if (this.client?.isReady) return this.client;
-    if (this.connecting) return this.connecting;
-
-    const client = createClient({ url: loadConfig().REDIS_URL });
-    client.on('error', () => {
+  constructor() {
+    this.client.on('error', () => {
       // Intentionally avoid logging connection details or credentials here.
     });
+  }
 
-    this.connecting = client
+  private async ensureConnected(): Promise<void> {
+    if (this.client.isReady) return;
+    if (this.connecting) return this.connecting;
+
+    this.connecting = this.client
       .connect()
-      .then(() => {
-        this.client = client;
-        return client;
-      })
+      .then(() => undefined)
       .finally(() => {
         this.connecting = undefined;
       });
@@ -30,8 +28,8 @@ export class RedisService implements OnApplicationShutdown {
   }
 
   async incrementWithin(key: string, limit: number, seconds: number): Promise<boolean> {
-    const client = await this.getClient();
-    const result = await client.eval(
+    await this.ensureConnected();
+    const result = await this.client.eval(
       "local n=redis.call('INCR',KEYS[1]); if n==1 then redis.call('EXPIRE',KEYS[1],ARGV[1]) end; return n",
       { keys: [key], arguments: [String(seconds)] },
     );
@@ -39,11 +37,11 @@ export class RedisService implements OnApplicationShutdown {
   }
 
   async ping(): Promise<void> {
-    const client = await this.getClient();
-    await client.ping();
+    await this.ensureConnected();
+    await this.client.ping();
   }
 
   async onApplicationShutdown(): Promise<void> {
-    if (this.client?.isOpen) await this.client.quit();
+    if (this.client.isOpen) await this.client.quit();
   }
 }
