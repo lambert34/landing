@@ -27,15 +27,21 @@ interface SessionUserRow {
   created_at: Date;
   email_verified_at: Date | null;
 }
+export type AuthenticationResult =
+  | { status: 'authenticated'; user: StoredUser; sessionId: string; purpose: OtpPurpose }
+  | { status: 'account_exists' };
+
 @Injectable()
 export class AuthRepository {
   constructor(@Inject(DATABASE) private readonly database: Database) {}
+
   async userByEmail(email: string): Promise<StoredUser | null> {
     const rows = await this.database.client<
       StoredUser[]
     >`SELECT id,email,created_at AS "createdAt",email_verified_at AS "emailVerifiedAt" FROM users WHERE email=${email} LIMIT 1`;
     return rows[0] ?? null;
   }
+
   async createChallenge(
     id: string,
     email: string,
@@ -46,19 +52,23 @@ export class AuthRepository {
     await this.database
       .client`INSERT INTO auth_challenges (id,email,purpose,code_digest,expires_at) VALUES (${id},${email},${purpose},${digest},${expiresAt})`;
   }
+
   async failChallenge(id: string, max: number): Promise<'invalid' | 'limited'> {
     const rows = await this.database.client<
       { attempt_count: number }[]
     >`UPDATE auth_challenges SET attempt_count=attempt_count+1 WHERE id=${id} AND consumed_at IS NULL AND expires_at>now() AND attempt_count<${max} RETURNING attempt_count`;
-    return (rows[0]?.attempt_count ?? max) >= max ? 'limited' : 'invalid';
+    const attemptCount = rows[0]?.attempt_count;
+    if (attemptCount === undefined) return 'invalid';
+    return attemptCount >= max ? 'limited' : 'invalid';
   }
+
   async consumeAndAuthenticate(
     id: string,
     digest: string,
     maxAttempts: number,
     tokenHash: string,
     sessionExpiresAt: Date,
-  ): Promise<{ user: StoredUser; sessionId: string; purpose: OtpPurpose } | null> {
+  ): Promise<AuthenticationResult | null> {
     return this.database.client.begin(async (sql: DatabaseTransaction) => {
       const challenges = await sql<
         Challenge[]
@@ -72,24 +82,38 @@ export class AuthRepository {
         challenge.codeDigest !== digest
       )
         return null;
-      await sql`UPDATE auth_challenges SET consumed_at=now() WHERE id=${id} AND consumed_at IS NULL`;
+
+      const consumed = await sql<
+        { id: string }[]
+      >`UPDATE auth_challenges SET consumed_at=now() WHERE id=${id} AND consumed_at IS NULL RETURNING id`;
+      if (!consumed[0]) return null;
+
       let userRows = await sql<
         StoredUser[]
       >`SELECT id,email,created_at AS "createdAt",email_verified_at AS "emailVerifiedAt" FROM users WHERE email=${challenge.email} FOR UPDATE`;
-      if (challenge.purpose === 'signup' && userRows[0]) throw new Error('ACCOUNT_ALREADY_EXISTS');
+
+      if (challenge.purpose === 'signup' && userRows[0]) return { status: 'account_exists' };
       if (challenge.purpose === 'login' && !userRows[0]) return null;
+
       if (!userRows[0])
         userRows = await sql<
           StoredUser[]
         >`INSERT INTO users(email,email_verified_at,last_login_at) VALUES (${challenge.email},now(),now()) RETURNING id,email,created_at AS "createdAt",email_verified_at AS "emailVerifiedAt"`;
       else
         await sql`UPDATE users SET last_login_at=now(),updated_at=now() WHERE id=${userRows[0].id}`;
+
       const sessions = await sql<
         { id: string }[]
       >`INSERT INTO sessions(user_id,token_hash,expires_at) VALUES (${userRows[0]!.id},${tokenHash},${sessionExpiresAt}) RETURNING id`;
-      return { user: userRows[0]!, sessionId: sessions[0]!.id, purpose: challenge.purpose };
+      return {
+        status: 'authenticated',
+        user: userRows[0]!,
+        sessionId: sessions[0]!.id,
+        purpose: challenge.purpose,
+      };
     });
   }
+
   async session(tokenHash: string): Promise<{ sessionId: string; user: StoredUser } | null> {
     const rows = await this.database.client<
       SessionUserRow[]
@@ -107,12 +131,14 @@ export class AuthRepository {
       },
     };
   }
+
   async revoke(tokenHash: string): Promise<string | null> {
     const rows = await this.database.client<
       { user_id: string }[]
     >`UPDATE sessions SET revoked_at=now() WHERE token_hash=${tokenHash} AND revoked_at IS NULL RETURNING user_id`;
     return rows[0]?.user_id ?? null;
   }
+
   async audit(
     event: AuditEvent,
     subjectHash: string | null,
@@ -121,6 +147,7 @@ export class AuthRepository {
     await this.database
       .client`INSERT INTO auth_audit_events(event,subject_hash,user_id) VALUES (${event},${subjectHash},${userId})`;
   }
+
   async ready(): Promise<void> {
     await this.database.client`SELECT 1`;
   }
