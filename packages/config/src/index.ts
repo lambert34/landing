@@ -56,12 +56,41 @@ const schema = z
         });
     }
 
-    if (!value.AUTH_COOKIE_DOMAIN.endsWith('.crypto-g64.ru'))
+    const placeholderSecrets = [
+      'replace-with-at-least-32-random-bytes',
+      'replace-with-a-different-32-byte-secret',
+    ];
+    for (const key of ['OTP_PEPPER', 'RATE_LIMIT_PEPPER'] as const) {
+      if (placeholderSecrets.includes(value[key]))
+        context.addIssue({
+          code: 'custom',
+          path: [key],
+          message: `${key} must be replaced with a real production secret`,
+        });
+    }
+
+    if (value.OTP_PEPPER === value.RATE_LIMIT_PEPPER)
+      context.addIssue({
+        code: 'custom',
+        path: ['RATE_LIMIT_PEPPER'],
+        message: 'RATE_LIMIT_PEPPER must be different from OTP_PEPPER',
+      });
+
+    if (value.AUTH_COOKIE_DOMAIN !== '.crypto-g64.ru')
       context.addIssue({
         code: 'custom',
         path: ['AUTH_COOKIE_DOMAIN'],
-        message: 'must support .crypto-g64.ru',
+        message: 'AUTH_COOKIE_DOMAIN must be .crypto-g64.ru in production',
       });
+
+    for (const key of ['WEB_URL', 'API_URL'] as const) {
+      if (!value[key].startsWith('https://'))
+        context.addIssue({
+          code: 'custom',
+          path: [key],
+          message: `${key} must use HTTPS in production`,
+        });
+    }
   });
 
 export type G64Config = z.infer<typeof schema>;
