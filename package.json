@@ -9,7 +9,7 @@
     "build": "pnpm -r build",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "pnpm -r typecheck",
-    "test": "vitest run",
+    "test": "pnpm --filter @g64/config build && pnpm --filter @g64/database build && pnpm --filter @g64/types build && vitest run",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "infra:up": "docker compose up -d",
