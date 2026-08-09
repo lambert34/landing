@@ -16,7 +16,10 @@ import { OriginGuard } from './origin.guard.js';
 export class AuthController {
   private readonly config = loadConfig();
   constructor(private readonly auth: AuthService) {}
-  @Post('otp/request') async requestOtp(
+
+  @Post('otp/request')
+  @UseGuards(OriginGuard)
+  async requestOtp(
     @Body() body: unknown,
     @Req() request: HttpRequest,
   ): Promise<OtpRequestResponse> {
@@ -27,7 +30,10 @@ export class AuthController {
       ip: request.ip ?? request.socket.remoteAddress ?? 'unknown',
     });
   }
-  @Post('otp/verify') async verifyOtp(
+
+  @Post('otp/verify')
+  @UseGuards(OriginGuard)
+  async verifyOtp(
     @Body() body: unknown,
     @Res({ passthrough: true }) response: HttpResponse,
   ): Promise<SessionResponse> {
@@ -40,10 +46,15 @@ export class AuthController {
     });
     return { authenticated: true, user: result.user };
   }
-  @Get('session') session(@Req() request: HttpRequest): Promise<SessionResponse> {
+
+  @Get('session')
+  session(@Req() request: HttpRequest): Promise<SessionResponse> {
     return this.auth.session(cookieValue(request, this.config.SESSION_COOKIE_NAME));
   }
-  @Post('logout') @UseGuards(OriginGuard) async logout(
+
+  @Post('logout')
+  @UseGuards(OriginGuard)
+  async logout(
     @Req() request: HttpRequest,
     @Res({ passthrough: true }) response: HttpResponse,
   ): Promise<{ success: true }> {
@@ -51,6 +62,7 @@ export class AuthController {
     response.clearCookie(this.config.SESSION_COOKIE_NAME, this.cookieOptions());
     return { success: true };
   }
+
   private cookieOptions(): CookieOptions {
     const options: CookieOptions = {
       httpOnly: true,
