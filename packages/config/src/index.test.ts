@@ -12,6 +12,20 @@ const valid = {
   RATE_LIMIT_PEPPER: 'r'.repeat(32),
 };
 
+const production = {
+  ...valid,
+  NODE_ENV: 'production',
+  WEB_URL: 'https://www.crypto-g64.ru',
+  API_URL: 'https://api.crypto-g64.ru',
+  AUTH_COOKIE_DOMAIN: '.crypto-g64.ru',
+  SMTP_HOST: 'smtp.example.com',
+  SMTP_PORT: '587',
+  SMTP_SECURE: 'false',
+  SMTP_USER: 'mailer',
+  SMTP_PASSWORD: 'secret',
+  EMAIL_FROM: 'G64 <no-reply@crypto-g64.ru>',
+};
+
 describe('loadConfig', () => {
   it('validates a complete environment', () => expect(loadConfig(valid).NODE_ENV).toBe('test'));
   it('rejects missing settings', () => expect(() => loadConfig({})).toThrow());
@@ -29,20 +43,24 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ ...valid, REDIS_URL: 'https://localhost:6379' })).toThrow());
   it('requires production SMTP and crypto-g64.ru cookie configuration', () =>
     expect(() => loadConfig({ ...valid, NODE_ENV: 'production' })).toThrow());
+  it('rejects placeholder production peppers', () =>
+    expect(() =>
+      loadConfig({
+        ...production,
+        OTP_PEPPER: 'replace-with-at-least-32-random-bytes',
+        RATE_LIMIT_PEPPER: 'replace-with-a-different-32-byte-secret',
+      }),
+    ).toThrow());
+  it('requires independent production peppers', () =>
+    expect(() =>
+      loadConfig({ ...production, OTP_PEPPER: 'x'.repeat(32), RATE_LIMIT_PEPPER: 'x'.repeat(32) }),
+    ).toThrow());
+  it('requires HTTPS frontend and API URLs in production', () =>
+    expect(() => loadConfig({ ...production, WEB_URL: 'http://www.crypto-g64.ru' })).toThrow());
+  it('requires the exact shared production cookie domain', () =>
+    expect(() => loadConfig({ ...production, AUTH_COOKIE_DOMAIN: '.sub.crypto-g64.ru' })).toThrow());
   it('accepts a complete production configuration', () => {
-    const result = loadConfig({
-      ...valid,
-      NODE_ENV: 'production',
-      WEB_URL: 'https://www.crypto-g64.ru',
-      API_URL: 'https://api.crypto-g64.ru',
-      AUTH_COOKIE_DOMAIN: '.crypto-g64.ru',
-      SMTP_HOST: 'smtp.example.com',
-      SMTP_PORT: '587',
-      SMTP_SECURE: 'false',
-      SMTP_USER: 'mailer',
-      SMTP_PASSWORD: 'secret',
-      EMAIL_FROM: 'G64 <no-reply@crypto-g64.ru>',
-    });
+    const result = loadConfig(production);
     expect(result.AUTH_COOKIE_DOMAIN).toBe('.crypto-g64.ru');
   });
 });
