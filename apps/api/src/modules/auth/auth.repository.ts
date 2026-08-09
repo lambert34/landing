@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { DatabaseTransaction } from '@g64/database';
 import { DATABASE, type Database } from '../../infrastructure/database/database.module.js';
+import { verifyDigest } from './auth.crypto.js';
 import type { AuditEvent, OtpPurpose } from './auth.types.js';
 
 export interface Challenge {
@@ -29,7 +30,9 @@ interface SessionUserRow {
 }
 export type AuthenticationResult =
   | { status: 'authenticated'; user: StoredUser; sessionId: string; purpose: OtpPurpose }
-  | { status: 'account_exists' };
+  | { status: 'account_exists' }
+  | { status: 'invalid' }
+  | { status: 'limited' };
 
 @Injectable()
 export class AuthRepository {
@@ -53,47 +56,41 @@ export class AuthRepository {
       .client`INSERT INTO auth_challenges (id,email,purpose,code_digest,expires_at) VALUES (${id},${email},${purpose},${digest},${expiresAt})`;
   }
 
-  async failChallenge(id: string, max: number): Promise<'invalid' | 'limited'> {
-    const rows = await this.database.client<
-      { attempt_count: number }[]
-    >`UPDATE auth_challenges SET attempt_count=attempt_count+1 WHERE id=${id} AND consumed_at IS NULL AND expires_at>now() AND attempt_count<${max} RETURNING attempt_count`;
-    const attemptCount = rows[0]?.attempt_count;
-    if (attemptCount === undefined) return 'invalid';
-    return attemptCount >= max ? 'limited' : 'invalid';
-  }
-
   async consumeAndAuthenticate(
     id: string,
     digest: string,
     maxAttempts: number,
     tokenHash: string,
     sessionExpiresAt: Date,
-  ): Promise<AuthenticationResult | null> {
+  ): Promise<AuthenticationResult> {
     return this.database.client.begin(async (sql: DatabaseTransaction) => {
       const challenges = await sql<
         Challenge[]
       >`SELECT id,email,purpose,code_digest AS "codeDigest",expires_at AS "expiresAt",consumed_at AS "consumedAt",attempt_count AS "attemptCount" FROM auth_challenges WHERE id=${id} FOR UPDATE`;
       const challenge = challenges[0];
-      if (
-        !challenge ||
-        challenge.consumedAt ||
-        challenge.expiresAt <= new Date() ||
-        challenge.attemptCount >= maxAttempts ||
-        challenge.codeDigest !== digest
-      )
-        return null;
+
+      if (!challenge || challenge.consumedAt || challenge.expiresAt <= new Date()) {
+        return { status: 'invalid' };
+      }
+      if (challenge.attemptCount >= maxAttempts) return { status: 'limited' };
+
+      if (!verifyDigest(challenge.codeDigest, digest)) {
+        const nextAttemptCount = challenge.attemptCount + 1;
+        await sql`UPDATE auth_challenges SET attempt_count=${nextAttemptCount} WHERE id=${id}`;
+        return { status: nextAttemptCount >= maxAttempts ? 'limited' : 'invalid' };
+      }
 
       const consumed = await sql<
         { id: string }[]
       >`UPDATE auth_challenges SET consumed_at=now() WHERE id=${id} AND consumed_at IS NULL RETURNING id`;
-      if (!consumed[0]) return null;
+      if (!consumed[0]) return { status: 'invalid' };
 
       let userRows = await sql<
         StoredUser[]
       >`SELECT id,email,created_at AS "createdAt",email_verified_at AS "emailVerifiedAt" FROM users WHERE email=${challenge.email} FOR UPDATE`;
 
       if (challenge.purpose === 'signup' && userRows[0]) return { status: 'account_exists' };
-      if (challenge.purpose === 'login' && !userRows[0]) return null;
+      if (challenge.purpose === 'login' && !userRows[0]) return { status: 'invalid' };
 
       if (!userRows[0])
         userRows = await sql<
