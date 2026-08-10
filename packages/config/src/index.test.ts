@@ -15,7 +15,7 @@ const valid = {
 const production = {
   ...valid,
   NODE_ENV: 'production',
-  WEB_URL: 'https://www.crypto-g64.ru',
+  WEB_URL: 'https://crypto-g64.ru',
   API_URL: 'https://api.crypto-g64.ru',
   AUTH_COOKIE_DOMAIN: '.crypto-g64.ru',
   SMTP_HOST: 'smtp.example.com',
@@ -55,12 +55,15 @@ describe('loadConfig', () => {
     expect(() =>
       loadConfig({ ...production, OTP_PEPPER: 'x'.repeat(32), RATE_LIMIT_PEPPER: 'x'.repeat(32) }),
     ).toThrow());
-  it('requires HTTPS frontend and API URLs in production', () =>
-    expect(() => loadConfig({ ...production, WEB_URL: 'http://www.crypto-g64.ru' })).toThrow());
+  it('requires the canonical root frontend URL in production', () =>
+    expect(() => loadConfig({ ...production, WEB_URL: 'https://www.crypto-g64.ru' })).toThrow());
+  it('requires the canonical API URL in production', () =>
+    expect(() => loadConfig({ ...production, API_URL: 'https://example.com' })).toThrow());
   it('requires the exact shared production cookie domain', () =>
     expect(() => loadConfig({ ...production, AUTH_COOKIE_DOMAIN: '.sub.crypto-g64.ru' })).toThrow());
   it('accepts a complete production configuration', () => {
     const result = loadConfig(production);
+    expect(result.WEB_URL).toBe('https://crypto-g64.ru');
     expect(result.AUTH_COOKIE_DOMAIN).toBe('.crypto-g64.ru');
   });
 });

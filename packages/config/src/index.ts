@@ -83,14 +83,19 @@ const schema = z
         message: 'AUTH_COOKIE_DOMAIN must be .crypto-g64.ru in production',
       });
 
-    for (const key of ['WEB_URL', 'API_URL'] as const) {
-      if (!value[key].startsWith('https://'))
-        context.addIssue({
-          code: 'custom',
-          path: [key],
-          message: `${key} must use HTTPS in production`,
-        });
-    }
+    if (value.WEB_URL !== 'https://crypto-g64.ru')
+      context.addIssue({
+        code: 'custom',
+        path: ['WEB_URL'],
+        message: 'WEB_URL must be https://crypto-g64.ru in production',
+      });
+
+    if (value.API_URL !== 'https://api.crypto-g64.ru')
+      context.addIssue({
+        code: 'custom',
+        path: ['API_URL'],
+        message: 'API_URL must be https://api.crypto-g64.ru in production',
+      });
   });
 
 export type G64Config = z.infer<typeof schema>;

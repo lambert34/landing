@@ -26,7 +26,7 @@ Run `pnpm infra:up`, `pnpm db:migrate`, then `pnpm dev`. Mailpit receives SMTP o
 2. Attach a Marketplace-compatible PostgreSQL provider and standard Redis provider near API compute. Require TLS and use a pooled PostgreSQL connection string.
 3. Configure all documented environment variables and a production SMTP account; never deploy Mailpit.
 4. Deploy, run migrations as a controlled release step, verify `/api/health` and `/api/health/ready`, then attach `api.crypto-g64.ru` manually.
-5. Set `WEB_URL=https://www.crypto-g64.ru`, `API_URL=https://api.crypto-g64.ru`, and later expose that API URL to the frontend. DNS and production resources are intentionally not created here.
+5. Set `WEB_URL=https://crypto-g64.ru`, `API_URL=https://api.crypto-g64.ru`, and later expose that API URL to the frontend. `crypto-g64.ru` is the canonical public site; `www.crypto-g64.ru` should only redirect to it. DNS and production resources are intentionally not created here.
 
 ## Phase 1B handoff
 
