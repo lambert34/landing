@@ -1,0 +1,33 @@
+name: Fix Nest runtime dependency
+
+on:
+  push:
+    branches:
+      - fix/nest-platform-express-runtime
+
+permissions:
+  contents: write
+
+jobs:
+  update-dependency:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/nest-platform-express-runtime
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: corepack enable
+      - run: corepack prepare pnpm@10.28.1 --activate
+      - run: pnpm --filter @g64/api add @nestjs/platform-express@^11.1.6
+      - run: git rm .github/workflows/fix-nest-runtime.yml
+      - name: Commit dependency update
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add apps/api/package.json pnpm-lock.yaml
+          git commit -m "fix: add NestJS HTTP platform adapter"
+          git push origin HEAD:fix/nest-platform-express-runtime
