@@ -5,6 +5,26 @@ import { RedisService } from '../../infrastructure/redis/redis.service.js';
 
 type DependencyStatus = 'ok' | 'unavailable';
 
+const DEPENDENCY_TIMEOUT_MS = 5_000;
+
+async function withTimeout(operation: Promise<unknown>): Promise<void> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    await Promise.race([
+      operation,
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(
+          () => reject(new Error('Dependency health check timed out')),
+          DEPENDENCY_TIMEOUT_MS,
+        );
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
 @Controller('health')
 export class HealthController {
   constructor(
@@ -22,22 +42,15 @@ export class HealthController {
     status: 'ok';
     dependencies: { database: 'ok'; redis: 'ok' };
   }> {
+    const [databaseResult, redisResult] = await Promise.allSettled([
+      withTimeout(this.database.client`SELECT 1`),
+      withTimeout(this.redis.ping()),
+    ]);
+
     const dependencies: { database: DependencyStatus; redis: DependencyStatus } = {
-      database: 'ok',
-      redis: 'ok',
+      database: databaseResult.status === 'fulfilled' ? 'ok' : 'unavailable',
+      redis: redisResult.status === 'fulfilled' ? 'ok' : 'unavailable',
     };
-
-    try {
-      await this.database.client`SELECT 1`;
-    } catch {
-      dependencies.database = 'unavailable';
-    }
-
-    try {
-      await this.redis.ping();
-    } catch {
-      dependencies.redis = 'unavailable';
-    }
 
     if (dependencies.database !== 'ok' || dependencies.redis !== 'ok') {
       throw new ServiceUnavailableException({ status: 'unavailable', dependencies });
