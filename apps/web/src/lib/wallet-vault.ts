@@ -88,10 +88,11 @@ export async function getWalletVaultMetadata(): Promise<WalletVaultMetadata | nu
   const db = await openDatabase();
   try {
     const transaction = db.transaction(VAULT_STORE, 'readonly');
+    const done = transactionDone(transaction);
     const record = (await requestResult(
       transaction.objectStore(VAULT_STORE).get(PRIMARY_VAULT_ID),
     )) as VaultRecord | undefined;
-    await transactionDone(transaction);
+    await done;
     return record ? metadata(record) : null;
   } finally {
     db.close();
@@ -115,10 +116,11 @@ export async function createWalletVault(
   try {
     if (!options.replace) {
       const existingTransaction = db.transaction(VAULT_STORE, 'readonly');
+      const existingDone = transactionDone(existingTransaction);
       const existing = await requestResult(
         existingTransaction.objectStore(VAULT_STORE).get(PRIMARY_VAULT_ID),
       );
-      await transactionDone(existingTransaction);
+      await existingDone;
       if (existing) throw new Error('A local G64 EVM wallet vault already exists.');
     }
 
@@ -150,9 +152,10 @@ export async function createWalletVault(
     };
 
     const transaction = db.transaction([VAULT_STORE, KEY_STORE], 'readwrite');
+    const done = transactionDone(transaction);
     transaction.objectStore(KEY_STORE).put({ id: PRIMARY_VAULT_ID, key } satisfies KeyRecord);
     transaction.objectStore(VAULT_STORE).put(record);
-    await transactionDone(transaction);
+    await done;
 
     return metadata(record);
   } finally {
@@ -162,10 +165,11 @@ export async function createWalletVault(
 
 async function getExistingRecord(db: IDBDatabase): Promise<VaultRecord | null> {
   const transaction = db.transaction(VAULT_STORE, 'readonly');
+  const done = transactionDone(transaction);
   const record = (await requestResult(
     transaction.objectStore(VAULT_STORE).get(PRIMARY_VAULT_ID),
   )) as VaultRecord | undefined;
-  await transactionDone(transaction);
+  await done;
   return record ?? null;
 }
 
@@ -173,13 +177,14 @@ export async function decryptWalletEntropy(): Promise<Uint8Array> {
   const db = await openDatabase();
   try {
     const transaction = db.transaction([VAULT_STORE, KEY_STORE], 'readonly');
+    const done = transactionDone(transaction);
     const vaultRequest = transaction.objectStore(VAULT_STORE).get(PRIMARY_VAULT_ID);
     const keyRequest = transaction.objectStore(KEY_STORE).get(PRIMARY_VAULT_ID);
     const [record, keyRecord] = await Promise.all([
       requestResult(vaultRequest) as Promise<VaultRecord | undefined>,
       requestResult(keyRequest) as Promise<KeyRecord | undefined>,
     ]);
-    await transactionDone(transaction);
+    await done;
 
     if (!record || !keyRecord?.key) throw new Error('Local G64 wallet vault is unavailable.');
 
@@ -209,9 +214,10 @@ export async function deleteWalletVault(): Promise<void> {
   const db = await openDatabase();
   try {
     const transaction = db.transaction([VAULT_STORE, KEY_STORE], 'readwrite');
+    const done = transactionDone(transaction);
     transaction.objectStore(VAULT_STORE).delete(PRIMARY_VAULT_ID);
     transaction.objectStore(KEY_STORE).delete(PRIMARY_VAULT_ID);
-    await transactionDone(transaction);
+    await done;
   } finally {
     db.close();
   }
