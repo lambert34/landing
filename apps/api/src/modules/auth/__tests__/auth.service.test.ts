@@ -122,6 +122,30 @@ describe('AuthService', () => {
     expect(result.sessionToken).not.toEqual(expect.stringContaining(tokenHash));
   });
 
+  it('normalizes PostgreSQL timestamp strings in auth responses', async () => {
+    const userFromDatabase = {
+      ...storedUser,
+      createdAt: '2026-08-09T12:00:00.000Z',
+      emailVerifiedAt: '2026-08-09T12:00:01.000Z',
+    };
+    const { service } = makeService({
+      consumeAndAuthenticate: vi.fn().mockResolvedValue({
+        status: 'authenticated',
+        user: userFromDatabase,
+        sessionId: '22222222-2222-4222-8222-222222222222',
+        purpose: 'signup',
+      }),
+    });
+
+    const result = await service.verifyOtp(
+      '11111111-1111-4111-8111-111111111111',
+      '123456',
+    );
+
+    expect(result.user.createdAt).toBe('2026-08-09T12:00:00.000Z');
+    expect(result.user.emailVerifiedAt).toBe('2026-08-09T12:00:01.000Z');
+  });
+
   it('accepts a valid session using only the hashed token lookup', async () => {
     const sessionLookup = vi.fn().mockResolvedValue({ sessionId: 'session-id', user: storedUser });
     const { service } = makeService({ session: sessionLookup });
