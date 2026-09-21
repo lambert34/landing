@@ -74,4 +74,45 @@ export const authAuditEvents = pgTable(
   ],
 );
 
+export const wallets = pgTable(
+  'wallets',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    family: varchar('family', { length: 16 }).notNull(),
+    address: varchar('address', { length: 42 }).notNull(),
+    derivationPath: varchar('derivation_path', { length: 64 }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    uniqueIndex('wallets_user_family_unique').on(table.userId, table.family),
+    uniqueIndex('wallets_address_unique').on(table.address),
+    index('wallets_user_idx').on(table.userId),
+  ],
+);
+
+export const walletRegistrationChallenges = pgTable(
+  'wallet_registration_challenges',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    family: varchar('family', { length: 16 }).notNull(),
+    address: varchar('address', { length: 42 }).notNull(),
+    message: varchar('message', { length: 1024 }).notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    consumedAt: timestamp('consumed_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index('wallet_registration_user_created_idx').on(table.userId, table.createdAt),
+    index('wallet_registration_expires_idx').on(table.expiresAt),
+  ],
+);
+
 export type User = typeof users.$inferSelect;
+export type Wallet = typeof wallets.$inferSelect;

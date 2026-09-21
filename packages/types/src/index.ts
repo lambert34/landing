@@ -18,3 +18,24 @@ export interface OtpRequestResponse {
   expiresInSeconds: number;
   resendAfterSeconds: number;
 }
+
+export interface EvmWallet {
+  id: string;
+  family: 'evm';
+  address: `0x${string}`;
+  derivationPath: string;
+  createdAt: string;
+  updatedAt: string;
+}
+export interface EvmWalletResponse {
+  registered: boolean;
+  wallet: EvmWallet | null;
+}
+export interface WalletRegistrationChallengeResponse {
+  challengeId: string;
+  message: string;
+  expiresAt: string;
+}
+export interface WalletRegistrationResponse {
+  wallet: EvmWallet;
+}
