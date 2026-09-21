@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Badge, BrandLogo, Button, Card } from '@g64/ui';
 import { getSession, logout, type AuthUser } from '../lib/auth';
 import {
@@ -70,6 +70,7 @@ export function WalletClient() {
   const [recoveryPhrase, setRecoveryPhrase] = useState('');
   const [walletError, setWalletError] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
+  const pendingMaterialRef = useRef<WalletMaterial | null>(null);
 
   const mnemonicWords = useMemo(
     () => pendingWallet?.material.mnemonic.split(' ') ?? [],
@@ -99,10 +100,12 @@ export function WalletClient() {
 
     return () => {
       active = false;
-      if (pendingWallet) wipeBytes(pendingWallet.material.entropy);
+      const pending = pendingMaterialRef.current;
+      if (pending) {
+        wipeBytes(pending.entropy);
+        pendingMaterialRef.current = null;
+      }
     };
-    // pendingWallet is intentionally not a dependency: cleanup only needs the current render reference.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
   async function synchronizeWallet(authUser: AuthUser, active = true) {
@@ -171,6 +174,7 @@ export function WalletClient() {
   function startWalletCreation() {
     setWalletError(null);
     const material = generateWalletMaterial();
+    pendingMaterialRef.current = material;
     setPendingWallet({
       material,
       confirmationIndexes: chooseConfirmationIndexes(),
@@ -206,6 +210,7 @@ export function WalletClient() {
       const result = await registerEvmWallet(challenge.challengeId, signature);
       setServerWallet(result.wallet);
       wipeBytes(pendingWallet.material.entropy);
+      pendingMaterialRef.current = null;
       setPendingWallet(null);
       setConfirmationWords({});
       setPhase('ready');
@@ -255,7 +260,9 @@ export function WalletClient() {
     try {
       await logout();
     } finally {
-      if (pendingWallet) wipeBytes(pendingWallet.material.entropy);
+      const pending = pendingMaterialRef.current;
+      if (pending) wipeBytes(pending.entropy);
+      pendingMaterialRef.current = null;
       setPendingWallet(null);
       setRecoveryPhrase('');
       router.replace('/login');
