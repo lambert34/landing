@@ -128,14 +128,18 @@ export class AuthService {
   private present(user: {
     id: string;
     email: string;
-    createdAt: Date;
-    emailVerifiedAt: Date | null;
+    createdAt: Date | string;
+    emailVerifiedAt: Date | string | null;
   }) {
     return {
       id: user.id,
       email: user.email,
-      createdAt: user.createdAt.toISOString(),
-      emailVerifiedAt: user.emailVerifiedAt?.toISOString() ?? null,
+      createdAt: this.toIsoString(user.createdAt),
+      emailVerifiedAt: user.emailVerifiedAt ? this.toIsoString(user.emailVerifiedAt) : null,
     };
+  }
+
+  private toIsoString(value: Date | string): string {
+    return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
   }
 }
