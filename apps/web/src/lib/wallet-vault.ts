@@ -73,6 +73,12 @@ function additionalData(address: Address): Uint8Array {
   );
 }
 
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buffer).set(bytes);
+  return buffer;
+}
+
 function metadata(record: VaultRecord): WalletVaultMetadata {
   return {
     version: record.version,
@@ -131,9 +137,13 @@ export async function createWalletVault(
     );
     const iv = crypto.getRandomValues(new Uint8Array(12));
     const ciphertext = await crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv, additionalData: additionalData(address) },
+      {
+        name: 'AES-GCM',
+        iv: toArrayBuffer(iv),
+        additionalData: toArrayBuffer(additionalData(address)),
+      },
       key,
-      new Uint8Array(entropy),
+      toArrayBuffer(entropy),
     );
 
     const now = new Date().toISOString();
@@ -191,8 +201,8 @@ export async function decryptWalletEntropy(): Promise<Uint8Array> {
     const plaintext = await crypto.subtle.decrypt(
       {
         name: 'AES-GCM',
-        iv: record.iv,
-        additionalData: additionalData(record.address),
+        iv: toArrayBuffer(record.iv),
+        additionalData: toArrayBuffer(additionalData(record.address)),
       },
       keyRecord.key,
       record.ciphertext,
