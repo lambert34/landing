@@ -14,9 +14,6 @@ import {
   type PendingAuth,
 } from '../../lib/auth';
 
-function secondsUntil(timestamp: number): number {
-  return Math.max(0, Math.ceil((timestamp - Date.now()) / 1000));
-}
 
 export default function Verify() {
   const router = useRouter();
@@ -127,7 +124,6 @@ export default function Verify() {
               required
               autoFocus
               disabled={loading}
-              className="otp-input"
             />
           </label>
 
