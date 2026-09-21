@@ -29,3 +29,30 @@
   .account-email{display:none}
   .account-block button{font-size:12px}
 }
+
+.wallet-address{font-size:11px;color:var(--accent)!important;font-weight:700;letter-spacing:.02em}
+.wallet-setup-card{max-width:760px;margin:20px auto;padding:34px!important}
+.wallet-setup-card h1{font-size:44px;line-height:1;letter-spacing:-.05em;margin:16px 0 18px}
+.wallet-setup-card>p{color:var(--muted);line-height:1.6;max-width:650px}
+.wallet-setup-card>.button{margin-top:22px}
+.wallet-setup-note{margin:26px 0 4px;padding:18px;border:1px solid var(--border);border-radius:12px;background:#fafbfc;color:var(--muted);font-size:13px;line-height:1.55}
+.seed-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin:28px 0}
+.seed-word{display:flex;align-items:center;gap:9px;padding:11px 12px;border:1px solid var(--border);border-radius:10px;background:#fafbfc}
+.seed-word span{min-width:18px;color:var(--muted);font-size:10px;font-variant-numeric:tabular-nums}
+.seed-word strong{font-size:13px}
+.seed-confirm{margin-top:30px;padding-top:26px;border-top:1px solid var(--border)}
+.seed-confirm h2{margin:0 0 6px;font-size:20px}
+.seed-confirm>p{margin:0;color:var(--muted);font-size:13px}
+.seed-confirm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}
+.seed-confirm-grid label,.recovery-field{display:grid;gap:8px;font-size:12px;font-weight:700}
+.seed-confirm-grid input,.recovery-field textarea{width:100%;border:1px solid var(--border);border-radius:10px;background:#fff;color:var(--foreground);font:inherit;padding:12px 13px;outline:none}
+.seed-confirm-grid input:focus,.recovery-field textarea:focus{border-color:var(--accent)}
+.recovery-field{margin-top:26px}
+.recovery-field textarea{resize:vertical;line-height:1.6;font-weight:500}
+.wallet-privacy-note{font-size:12px!important;margin-top:10px!important}
+@media(max-width:760px){
+  .wallet-setup-card{padding:24px!important;margin:0}
+  .wallet-setup-card h1{font-size:36px}
+  .seed-grid{grid-template-columns:repeat(2,1fr)}
+  .seed-confirm-grid{grid-template-columns:1fr}
+}
