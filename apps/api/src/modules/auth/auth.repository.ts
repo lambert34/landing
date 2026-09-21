@@ -53,7 +53,7 @@ export class AuthRepository {
     expiresAt: Date,
   ): Promise<void> {
     await this.database
-      .client`INSERT INTO auth_challenges (id,email,purpose,code_digest,expires_at) VALUES (${id},${email},${purpose},${digest},${expiresAt})`;
+      .client`INSERT INTO auth_challenges (id,email,purpose,code_digest,expires_at) VALUES (${id},${email},${purpose},${digest},${expiresAt.toISOString()})`;
   }
 
   async consumeAndAuthenticate(
@@ -101,7 +101,7 @@ export class AuthRepository {
 
       const sessions = await sql<
         { id: string }[]
-      >`INSERT INTO sessions(user_id,token_hash,expires_at) VALUES (${userRows[0]!.id},${tokenHash},${sessionExpiresAt}) RETURNING id`;
+      >`INSERT INTO sessions(user_id,token_hash,expires_at) VALUES (${userRows[0]!.id},${tokenHash},${sessionExpiresAt.toISOString()}) RETURNING id`;
       return {
         status: 'authenticated',
         user: userRows[0]!,
