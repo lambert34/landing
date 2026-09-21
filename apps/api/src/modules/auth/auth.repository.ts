@@ -16,17 +16,15 @@ export interface Challenge {
 export interface StoredUser {
   id: string;
   email: string;
-  createdAt: Date;
-  emailVerifiedAt: Date | null;
+  createdAt: Date | string;
+  emailVerifiedAt: Date | string | null;
 }
 interface SessionUserRow {
   session_id: string;
-  expires_at: Date;
-  revoked_at: Date | null;
   id: string;
   email: string;
-  created_at: Date;
-  email_verified_at: Date | null;
+  created_at: Date | string;
+  email_verified_at: Date | string | null;
 }
 export type AuthenticationResult =
   | { status: 'authenticated'; user: StoredUser; sessionId: string; purpose: OtpPurpose }
@@ -66,10 +64,10 @@ export class AuthRepository {
     return this.database.client.begin(async (sql: DatabaseTransaction) => {
       const challenges = await sql<
         Challenge[]
-      >`SELECT id,email,purpose,code_digest AS "codeDigest",expires_at AS "expiresAt",consumed_at AS "consumedAt",attempt_count AS "attemptCount" FROM auth_challenges WHERE id=${id} FOR UPDATE`;
+      >`SELECT id,email,purpose,code_digest AS "codeDigest",expires_at AS "expiresAt",consumed_at AS "consumedAt",attempt_count AS "attemptCount" FROM auth_challenges WHERE id=${id} AND consumed_at IS NULL AND expires_at > now() FOR UPDATE`;
       const challenge = challenges[0];
 
-      if (!challenge || challenge.consumedAt || challenge.expiresAt <= new Date()) {
+      if (!challenge) {
         return { status: 'invalid' };
       }
       if (challenge.attemptCount >= maxAttempts) return { status: 'limited' };
@@ -114,9 +112,9 @@ export class AuthRepository {
   async session(tokenHash: string): Promise<{ sessionId: string; user: StoredUser } | null> {
     const rows = await this.database.client<
       SessionUserRow[]
-    >`SELECT s.id AS session_id,s.expires_at,s.revoked_at,u.id,u.email,u.created_at,u.email_verified_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=${tokenHash} LIMIT 1`;
+    >`SELECT s.id AS session_id,u.id,u.email,u.created_at,u.email_verified_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=${tokenHash} AND s.revoked_at IS NULL AND s.expires_at > now() LIMIT 1`;
     const row = rows[0];
-    if (!row || row.revoked_at || row.expires_at <= new Date()) return null;
+    if (!row) return null;
     await this.database.client`UPDATE sessions SET last_seen_at=now() WHERE id=${row.session_id}`;
     return {
       sessionId: row.session_id,
