@@ -1,0 +1,38 @@
+name: Phase 2 Lockfile
+
+on:
+  push:
+    branches:
+      - feat/phase-2-evm-wallet-core
+    paths:
+      - .github/workflows/phase2-lockfile.yml
+
+permissions:
+  contents: write
+
+jobs:
+  lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/phase-2-evm-wallet-core
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --lockfile-only
+      - name: Commit lockfile
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pnpm-lock.yaml
+          if git diff --cached --quiet; then
+            echo "Lockfile already current"
+            exit 0
+          fi
+          git commit -m "build: update lockfile for viem"
+          git push
