@@ -6,6 +6,7 @@ on:
       - feat/phase-2-evm-wallet-core
     paths:
       - .github/workflows/phase2-lockfile.yml
+      - apps/web/package.json
 
 permissions:
   contents: write
