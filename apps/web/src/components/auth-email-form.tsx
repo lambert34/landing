@@ -36,7 +36,6 @@ const copy = {
 export function AuthEmailForm({ purpose }: { purpose: AuthPurpose }) {
   const router = useRouter();
   const content = copy[purpose];
-  const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -56,7 +55,8 @@ export function AuthEmailForm({ purpose }: { purpose: AuthPurpose }) {
     event.preventDefault();
     if (loading) return;
 
-    const normalized = email.trim().toLowerCase();
+    const formData = new FormData(event.currentTarget);
+    const normalized = String(formData.get('email') ?? '').trim().toLowerCase();
     if (!normalized) return;
 
     setLoading(true);
@@ -94,8 +94,7 @@ export function AuthEmailForm({ purpose }: { purpose: AuthPurpose }) {
               inputMode="email"
               autoComplete="email"
               placeholder="you@example.com"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
+              name="email"
               required
               autoFocus
               disabled={loading}
@@ -108,7 +107,7 @@ export function AuthEmailForm({ purpose }: { purpose: AuthPurpose }) {
             </p>
           )}
 
-          <Button type="submit" disabled={loading || !email.trim()}>
+          <Button type="submit" disabled={loading}>
             {loading ? 'Sending code…' : content.submit}
           </Button>
         </form>
