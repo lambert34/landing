@@ -36,11 +36,13 @@ const copy = {
 export function AuthEmailForm({ purpose }: { purpose: AuthPurpose }) {
   const router = useRouter();
   const content = copy[purpose];
+  const [hydrated, setHydrated] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
     let active = true;
+    setHydrated(true);
     getSession()
       .then((session) => {
         if (active && session.authenticated) router.replace('/wallet');
@@ -107,8 +109,8 @@ export function AuthEmailForm({ purpose }: { purpose: AuthPurpose }) {
             </p>
           )}
 
-          <Button type="submit" disabled={loading}>
-            {loading ? 'Sending code…' : content.submit}
+          <Button type="submit" disabled={!hydrated || loading}>
+            {loading ? 'Sending code…' : hydrated ? content.submit : 'Loading secure sign-in…'}
           </Button>
         </form>
 
