@@ -38,7 +38,6 @@ export function AuthEmailForm({ purpose }: { purpose: AuthPurpose }) {
   const content = copy[purpose];
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [checkingSession, setCheckingSession] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -47,10 +46,7 @@ export function AuthEmailForm({ purpose }: { purpose: AuthPurpose }) {
       .then((session) => {
         if (active && session.authenticated) router.replace('/wallet');
       })
-      .catch(() => undefined)
-      .finally(() => {
-        if (active) setCheckingSession(false);
-      });
+      .catch(() => undefined);
     return () => {
       active = false;
     };
@@ -102,7 +98,7 @@ export function AuthEmailForm({ purpose }: { purpose: AuthPurpose }) {
               onChange={(event) => setEmail(event.target.value)}
               required
               autoFocus
-              disabled={loading || checkingSession}
+              disabled={loading}
             />
           </label>
 
@@ -112,8 +108,8 @@ export function AuthEmailForm({ purpose }: { purpose: AuthPurpose }) {
             </p>
           )}
 
-          <Button type="submit" disabled={loading || checkingSession || !email.trim()}>
-            {loading ? 'Sending code…' : checkingSession ? 'Checking session…' : content.submit}
+          <Button type="submit" disabled={loading || !email.trim()}>
+            {loading ? 'Sending code…' : content.submit}
           </Button>
         </form>
 
