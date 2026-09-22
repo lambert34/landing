@@ -70,6 +70,7 @@ export function WalletClient() {
   const [recoveryPhrase, setRecoveryPhrase] = useState('');
   const [walletError, setWalletError] = useState<string | null>(null);
   const [loggingOut, setLoggingOut] = useState(false);
+  // Keep pending secret material out of persistent storage and wipe it on teardown.
   const pendingMaterialRef = useRef<WalletMaterial | null>(null);
 
   const mnemonicWords = useMemo(
