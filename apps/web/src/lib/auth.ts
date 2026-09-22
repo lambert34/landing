@@ -42,26 +42,43 @@ export class AuthApiError extends Error {
   }
 }
 
-async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_URL}/api${path}`, {
-    ...init,
-    credentials: 'include',
-    cache: 'no-store',
-    headers: {
-      'Content-Type': 'application/json',
-      ...init?.headers,
-    },
-  });
+async function apiRequest<T>(
+  path: string,
+  init?: RequestInit,
+  timeoutMs = 10_000,
+): Promise<T> {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
 
-  const body = (await response.json().catch(() => null)) as
-    | ({ code?: string } & Record<string, unknown>)
-    | null;
+  try {
+    const response = await fetch(`${API_URL}/api${path}`, {
+      ...init,
+      credentials: 'include',
+      cache: 'no-store',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json',
+        ...init?.headers,
+      },
+    });
 
-  if (!response.ok) {
-    throw new AuthApiError(body?.code ?? 'REQUEST_FAILED', response.status);
+    const body = (await response.json().catch(() => null)) as
+      | ({ code?: string } & Record<string, unknown>)
+      | null;
+
+    if (!response.ok) {
+      throw new AuthApiError(body?.code ?? 'REQUEST_FAILED', response.status);
+    }
+
+    return body as T;
+  } catch (error) {
+    if (controller.signal.aborted) {
+      throw new AuthApiError('NETWORK_TIMEOUT', 0);
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
   }
-
-  return body as T;
 }
 
 export function requestOtp(email: string, purpose: AuthPurpose): Promise<OtpRequestResponse> {
@@ -79,7 +96,7 @@ export function verifyOtp(challengeId: string, code: string): Promise<SessionRes
 }
 
 export function getSession(): Promise<SessionResponse> {
-  return apiRequest<SessionResponse>('/auth/session');
+  return apiRequest<SessionResponse>('/auth/session', undefined, 4_000);
 }
 
 export function logout(): Promise<{ success: true }> {
@@ -146,6 +163,8 @@ export function authErrorMessage(error: unknown): string {
       return 'An account already exists for this email. Sign in instead.';
     case 'INVALID_REQUEST':
       return 'Check the information you entered and try again.';
+    case 'NETWORK_TIMEOUT':
+      return 'The connection is taking too long. Check your internet connection and try again.';
     default:
       return 'Something went wrong. Please try again.';
   }
